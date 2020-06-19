@@ -1,0 +1,95 @@
+# 1、写一个自动化框架
+# url	请求方式	请求头	请求参数	预期结果	返回结果	测试结果	测试人员
+# 本次自动化运行用例结果如下：
+# 运行时间：xxx
+# 运行用例情况：通过了多少条  失败了多少条
+# 丛excle中读--写进内容--读出---发送到邮件  或钉钉
+#1、先将excle用例读出
+#2、将excle中请求方式，请求参数 构成url接口
+#3、怎么去自动运行接口？？？？
+#4、运行时间 运行用例情况 将实际结果写入到excle中
+#5、将excle最终的内容读出
+#6将运行时间，用例成功的个数 失败的个数已邮件方式发出去
+import xlrd
+import xlwt
+from xlutils import copy
+import json
+import requests
+import yamail
+import jsonpath,threading,time
+class Send:
+    excle_url = r'D:\aaaaayuanchengbangong\bestTEST\接口测试测试用例模板.xlsx'
+    user = '2503297190@qq.com'
+    password = 'uzagaahwzzcteaej'
+    host = 'smtp.qq.com'
+    #读excle的用例内容-----------------------------------------------
+    def readExcle(self):
+        book = xlrd.open_workbook(Send.excle_url)#打开excle
+        sheet = book.sheet_by_index(0)#读取第一个sheet页
+        all_test_cases = {}#定义一个空列表
+        for i in range(1,sheet.nrows):#从第二行读取所有行
+            row = sheet.row_values(i)#取第i行的内容
+            all_test_cases[i] = row#把每行的数据添加到列表中
+        print(all_test_cases)
+        return all_test_cases
+
+#-------------------------------------------将测试返回的结果和结果是否通过写进excle用例中
+    def write_Excle(self,result,responses):
+        book = xlrd.open_workbook(Send.excle_url)  # 打开excle
+        copy_book = copy.copy(book)#复制一份新excle
+        sheet = copy_book.get_sheet(0)  # 读取第一个sheet页
+        for row in range(len(responses)):#对返回的结果进行遍历
+            sheet.write(row+1, 9, responses[row])#将结果循环写进excle中
+        for row1 in range(len(result)):#对进行测试结果进行遍历
+            sheet.write(row1+1, 8, result[row1])#将结果循环写进excle中
+        copy_book.save(Send.excle_url)#保存excle数据
+#-----------------------------------------运行时间统计
+    def run_time(self):
+        pass
+
+#-----------------------------------------将运行的最终结果发送邮件
+    def eamil(self):
+        smtp = yamail.SMTP(host=Send.host, user=Send.user, password=Send.password)
+        smtp.send(
+            '511402865@qq.com',  # 收件人
+            '测试用例执行结果',  # 邮件标题
+            #todo 运行用例情况：通过了多少条  失败了多少条，运行时间
+            ['邮件内容'],## 运行时间：xxx
+            Send.excle_url      # 添加的附件
+        )
+#---------------------------------------发送get请求
+    def get_res(self,url,data):
+        r = requests.get(url,params=data)
+        return_res = r.text
+        return return_res
+#---------------------------------------发送post请求
+    def post_res(self,all_test_cases,url,data,cookies=None):
+        all_test_case = self.readExcle(Send.excle_url)
+        for case in all_test_cases:
+            if case['headers'] != None:
+                r = requests.post(url, data, cookies)
+                res = r.text
+        r = requests.post(url,data,)
+
+# -------------------------------------------------执行用例
+    def excute_case(self):
+        res_dict = self.readExcle(Send.excle_url)
+        #res = json.jsonpath(dict,'$..phone')#$表示外层大字典，'..'表示模糊查询key为phone的所有value值
+        for i in range(len(res_dict)):
+            if json.jsonpath(res_dict,'$..i') == 'get':
+                self.get_res()
+            else:
+                self.post_res()
+#-----------------------------------------------------执行的时间
+    def excute_time(self):
+        start_time1 = time.time()
+        t = threading.Thread(target=self.excute_case())
+        t.start()
+        end_time1 = time.time()
+#-------------------------------------------------测试结果：预期与实际进行比较
+    def test_res(self,excepted_res,return_res):
+        if excepted_res == return_res:
+            return '通过'
+        else:
+            return '失败'
+
